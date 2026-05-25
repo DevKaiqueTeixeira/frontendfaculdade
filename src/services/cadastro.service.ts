@@ -1,6 +1,9 @@
 import { CadastroMensagemPayload, Mensagem } from "@/types/mensagem";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
+  ?? (process.env.NODE_ENV === "production"
+    ? "https://backendfaculdade.onrender.com"
+    : "http://localhost:8080");
 const CADASTRO_ENDPOINT = `${API_BASE_URL}/cadastro`;
 
 export async function cadastrarMensagem(payload: CadastroMensagemPayload): Promise<string> {
