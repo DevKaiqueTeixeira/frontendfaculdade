@@ -6,7 +6,7 @@ import { cadastrarCliente } from "@/services/cliente.service";
 type FormData = {
   nome: string;
   cpf: string;
-  senha: string;
+  authUserId: string;
   email: string;
   dataNascimento: string;
 };
@@ -16,7 +16,7 @@ type StatusType = "idle" | "success" | "error";
 const initialForm: FormData = {
   nome: "",
   cpf: "",
-  senha: "",
+  authUserId: "",
   email: "",
   dataNascimento: "",
 };
@@ -44,7 +44,7 @@ export function useCadastroUsuarioStore() {
       const cliente = await cadastrarCliente({
         nome: formData.nome,
         cpf: formData.cpf,
-        senha: formData.senha,
+        authUserId: formData.authUserId,
         email: formData.email,
         dataNascimento: formData.dataNascimento,
       });
