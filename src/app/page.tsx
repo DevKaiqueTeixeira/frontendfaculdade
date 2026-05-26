@@ -290,21 +290,23 @@ export default function Home() {
                 </p>
               )}
 
-              <div className="mt-5 rounded-xl border border-[#caa27f]/40 bg-[#fffaf4] p-3 text-xs">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="font-semibold text-[#5f331d]">Sessão atual (teste)</p>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    disabled={!session}
-                    className="inline-flex items-center gap-1 rounded-lg border border-[#7a3f22]/35 px-2 py-1 text-[#7a3f22] disabled:opacity-50"
-                  >
-                    <LogOut className="h-3.5 w-3.5" />
-                    Sair
-                  </button>
+              {activeTab === "login" && (
+                <div className="mt-5 rounded-xl border border-[#caa27f]/40 bg-[#fffaf4] p-3 text-xs">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="font-semibold text-[#5f331d]">Sessão atual (teste)</p>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      disabled={!session}
+                      className="inline-flex items-center gap-1 rounded-lg border border-[#7a3f22]/35 px-2 py-1 text-[#7a3f22] disabled:opacity-50"
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                      Sair
+                    </button>
+                  </div>
+                  <pre className="max-h-56 overflow-auto rounded-lg bg-[#2f170d] p-3 text-[11px] text-[#ffe8cc]">{sessionJson}</pre>
                 </div>
-                <pre className="max-h-56 overflow-auto rounded-lg bg-[#2f170d] p-3 text-[11px] text-[#ffe8cc]">{sessionJson}</pre>
-              </div>
+              )}
             </div>
           </section>
         </div>
