@@ -13,8 +13,8 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Cafe 4 Irmaos",
-  description: "Cadastro e listagem de mensagens no cafe",
+  title: "Café 4 Irmãos",
+  description: "Cadastro de clientes da cafeteria",
 };
 
 export default function RootLayout({
