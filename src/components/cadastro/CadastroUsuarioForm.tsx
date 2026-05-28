@@ -32,7 +32,7 @@ export function CadastroUsuarioForm({
   statusMessage,
 }: CadastroUsuarioFormProps) {
   return (
-    <section className="relative w-full max-w-xl overflow-hidden rounded-[2rem] border border-[#d8b089]/30 bg-[#fff9f1]/90 shadow-[0_34px_100px_rgba(20,8,2,0.5)] backdrop-blur-md">
+    <section className="relative w-full max-w-xl overflow-hidden rounded-4xl border border-[#d8b089]/30 bg-[#fff9f1]/90 shadow-[0_34px_100px_rgba(20,8,2,0.5)] backdrop-blur-md">
       <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center">
         <Image src={cafeDetalhe} alt="Textura de café" className="h-[72%] w-auto opacity-[0.08]" />
       </div>

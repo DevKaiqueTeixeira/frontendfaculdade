@@ -3,7 +3,7 @@
 import { ComponentType, FormEvent, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { CalendarDays, Coffee, IdCard, LockKeyhole, LogIn, LogOut, Mail, UserPlus, UserRound } from "lucide-react";
-import type { Session, User } from "@supabase/supabase-js";
+import type { Session, SupabaseClient, User } from "@supabase/supabase-js";
 import cafe from "@/assets/cafe.png";
 import background from "@/assets/background.png";
 import { cadastrarAuthCliente } from "@/services/auth.service";
@@ -29,20 +29,25 @@ export default function Home() {
     senha: "",
   });
 
-  useEffect(() => {
-    let client;
-
+  const { supabase, supabaseInitError } = useMemo<{ supabase: SupabaseClient | null; supabaseInitError: string }>(() => {
     try {
-      client = getSupabaseClient();
+      return { supabase: getSupabaseClient(), supabaseInitError: "" };
     } catch (error) {
-      setStatusType("error");
-      setStatusMessage(error instanceof Error ? error.message : "Erro ao inicializar Supabase.");
+      return {
+        supabase: null,
+        supabaseInitError: error instanceof Error ? error.message : "Erro ao inicializar Supabase.",
+      };
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!supabase) {
       return;
     }
 
     let mounted = true;
 
-    client.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data }) => {
       if (!mounted) {
         return;
       }
@@ -51,7 +56,7 @@ export default function Home() {
       setUser(data.session?.user ?? null);
     });
 
-    const { data } = client.auth.onAuthStateChange((_event, nextSession) => {
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession ?? null);
       setUser(nextSession?.user ?? null);
     });
@@ -60,7 +65,7 @@ export default function Home() {
       mounted = false;
       data.subscription.unsubscribe();
     };
-  }, []);
+  }, [supabase]);
 
   const sessionJson = useMemo(
     () => JSON.stringify({ session, user }, null, 2),
@@ -117,7 +122,10 @@ export default function Home() {
     setStatusType("idle");
 
     try {
-      const supabase = getSupabaseClient();
+      if (!supabase) {
+        throw new Error(supabaseInitError || "Erro ao inicializar Supabase.");
+      }
+
       setLoginLoading(true);
 
       const { error } = await supabase.auth.signInWithPassword({
@@ -143,13 +151,9 @@ export default function Home() {
     setStatusMessage("");
     setStatusType("idle");
 
-    let supabase;
-
-    try {
-      supabase = getSupabaseClient();
-    } catch (error) {
+    if (!supabase) {
       setStatusType("error");
-      setStatusMessage(error instanceof Error ? error.message : "Erro ao inicializar Supabase.");
+      setStatusMessage(supabaseInitError || "Erro ao inicializar Supabase.");
       return;
     }
 
@@ -190,7 +194,7 @@ export default function Home() {
         </section>
 
         <div className="flex justify-center lg:justify-end">
-          <section className="relative w-full overflow-hidden rounded-[2rem] border border-[#d8b089]/30 bg-[#fff9f1]/90 shadow-[0_34px_100px_rgba(20,8,2,0.5)] backdrop-blur-md">
+          <section className="relative w-full overflow-hidden rounded-4xl border border-[#d8b089]/30 bg-[#fff9f1]/90 shadow-[0_34px_100px_rgba(20,8,2,0.5)] backdrop-blur-md">
             <div className="relative z-10 h-40 w-full md:h-44">
               <Image src={cafe} alt="Café especial" fill className="object-cover object-[center_30%]" priority />
               <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(60,28,14,0.2),rgba(60,28,14,0.7))]" />
@@ -207,18 +211,16 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("login")}
-                  className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
-                    activeTab === "login" ? "bg-[#6a3a21] text-[#fff7ed]" : "text-[#6a3a21]"
-                  }`}
+                  className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${activeTab === "login" ? "bg-[#6a3a21] text-[#fff7ed]" : "text-[#6a3a21]"
+                    }`}
                 >
                   Login
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab("cadastro")}
-                  className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
-                    activeTab === "cadastro" ? "bg-[#6a3a21] text-[#fff7ed]" : "text-[#6a3a21]"
-                  }`}
+                  className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${activeTab === "cadastro" ? "bg-[#6a3a21] text-[#fff7ed]" : "text-[#6a3a21]"
+                    }`}
                 >
                   Cadastro
                 </button>
@@ -276,17 +278,18 @@ export default function Home() {
                 </form>
               )}
 
-              {statusMessage && (
+              {(statusMessage || supabaseInitError) && (
                 <p
-                  className={`mt-4 rounded-xl border px-4 py-3 text-sm ${
-                    statusType === "success"
+                  className={`mt-4 rounded-xl border px-4 py-3 text-sm ${supabaseInitError
+                    ? "border-rose-400/40 bg-rose-100 text-rose-900"
+                    : statusType === "success"
                       ? "border-emerald-400/40 bg-emerald-100 text-emerald-900"
                       : statusType === "error"
                         ? "border-rose-400/40 bg-rose-100 text-rose-900"
                         : "border-slate-300 bg-slate-100 text-slate-900"
-                  }`}
+                    }`}
                 >
-                  {statusMessage}
+                  {statusMessage || supabaseInitError}
                 </p>
               )}
 
