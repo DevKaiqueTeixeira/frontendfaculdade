@@ -2,21 +2,22 @@
 
 import { ComponentType, FormEvent, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { CalendarDays, Coffee, IdCard, LockKeyhole, LogIn, LogOut, Mail, UserPlus, UserRound } from "lucide-react";
-import type { Session, SupabaseClient, User } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
+import { CalendarDays, Coffee, IdCard, LockKeyhole, LogIn, Mail, UserPlus, UserRound } from "lucide-react";
+import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import cafe from "@/assets/cafe.png";
 import background from "@/assets/background.png";
 import { cadastrarAuthCliente } from "@/services/auth.service";
 import { getSupabaseClient } from "@/services/supabase";
 
 export default function Home() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"cadastro" | "login">("login");
   const [cadastroLoading, setCadastroLoading] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [statusType, setStatusType] = useState<"idle" | "success" | "error">("idle");
   const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
   const [cadastroForm, setCadastroForm] = useState({
     nome: "",
     cpf: "",
@@ -53,12 +54,10 @@ export default function Home() {
       }
 
       setSession(data.session ?? null);
-      setUser(data.session?.user ?? null);
     });
 
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession ?? null);
-      setUser(nextSession?.user ?? null);
     });
 
     return () => {
@@ -67,10 +66,11 @@ export default function Home() {
     };
   }, [supabase]);
 
-  const sessionJson = useMemo(
-    () => JSON.stringify({ session, user }, null, 2),
-    [session, user],
-  );
+  useEffect(() => {
+    if (session) {
+      router.replace("/dashboard");
+    }
+  }, [router, session]);
 
   function setCadastroField(field: keyof typeof cadastroForm, value: string) {
     setCadastroForm((prev) => ({ ...prev, [field]: value }));
@@ -139,34 +139,13 @@ export default function Home() {
 
       setStatusType("success");
       setStatusMessage("Login realizado. Sessão ativa carregada abaixo para teste.");
+      router.replace("/dashboard");
     } catch (error) {
       setStatusType("error");
       setStatusMessage(error instanceof Error ? error.message : "Erro ao realizar login.");
     } finally {
       setLoginLoading(false);
     }
-  }
-
-  async function handleLogout() {
-    setStatusMessage("");
-    setStatusType("idle");
-
-    if (!supabase) {
-      setStatusType("error");
-      setStatusMessage(supabaseInitError || "Erro ao inicializar Supabase.");
-      return;
-    }
-
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      setStatusType("error");
-      setStatusMessage(error.message);
-      return;
-    }
-
-    setStatusType("success");
-    setStatusMessage("Sessão encerrada com sucesso.");
   }
 
   return (
@@ -293,23 +272,6 @@ export default function Home() {
                 </p>
               )}
 
-              {activeTab === "login" && (
-                <div className="mt-5 rounded-xl border border-[#caa27f]/40 bg-[#fffaf4] p-3 text-xs">
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <p className="font-semibold text-[#5f331d]">Sessão atual (teste)</p>
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      disabled={!session}
-                      className="inline-flex items-center gap-1 rounded-lg border border-[#7a3f22]/35 px-2 py-1 text-[#7a3f22] disabled:opacity-50"
-                    >
-                      <LogOut className="h-3.5 w-3.5" />
-                      Sair
-                    </button>
-                  </div>
-                  <pre className="max-h-56 overflow-auto rounded-lg bg-[#2f170d] p-3 text-[11px] text-[#ffe8cc]">{sessionJson}</pre>
-                </div>
-              )}
             </div>
           </section>
         </div>
