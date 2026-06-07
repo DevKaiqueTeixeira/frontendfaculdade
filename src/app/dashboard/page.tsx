@@ -1,17 +1,31 @@
 "use client";
 
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Coffee, LogOut, ShoppingBag, UserRound } from "lucide-react";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import logo4irmao from "@/assets/logo4imao.png";
+import ProfileModal from "@/components/dashboard/ProfileModal";
+import { notify } from "@/services/notify";
+import { buscarPerfil, criarPerfilDaSessao } from "@/services/profile.service";
+import { useProfileStore } from "@/stores/useProfileStore";
 import { getSupabaseClient } from "@/services/supabase";
+import type { ProfileFormData } from "@/types/profile";
 
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profileSnapshot, setProfileSnapshot] = useState<ProfileFormData | null>(null);
+  const {
+    canSubmit,
+    formData,
+    loadFromProfile,
+    loading: profileLoading,
+    setField,
+    submitProfile,
+  } = useProfileStore();
 
   const { supabase, supabaseInitError } = useMemo<{ supabase: SupabaseClient | null; supabaseInitError: string }>(() => {
     try {
@@ -25,6 +39,39 @@ export default function DashboardPage() {
   }, []);
 
   const [loading, setLoading] = useState(() => Boolean(supabase));
+
+  const profile = useMemo(() => {
+    return profileSnapshot ?? criarPerfilDaSessao(user);
+  }, [profileSnapshot, user]);
+
+  const carregarPerfilPersistido = useCallback(async (accessToken?: string, silent = false): Promise<ProfileFormData | null> => {
+    if (!supabase) {
+      return null;
+    }
+
+    let token = accessToken;
+
+    if (!token) {
+      const { data } = await supabase.auth.getSession();
+      token = data.session?.access_token;
+    }
+
+    if (!token) {
+      return null;
+    }
+
+    try {
+      const nextProfile = await buscarPerfil(token);
+      setProfileSnapshot(nextProfile);
+      return nextProfile;
+    } catch (error) {
+      if (!silent) {
+        notify.error(error instanceof Error ? error.message : "Nao foi possivel carregar o perfil.");
+      }
+
+      return null;
+    }
+  }, [supabase]);
 
   useEffect(() => {
     if (!supabase) {
@@ -41,6 +88,12 @@ export default function DashboardPage() {
       setUser(data.session?.user ?? null);
       setLoading(false);
 
+      if (data.session?.access_token) {
+        void carregarPerfilPersistido(data.session.access_token, true);
+      } else {
+        setProfileSnapshot(null);
+      }
+
       if (!data.session) {
         router.replace("/");
       }
@@ -48,6 +101,12 @@ export default function DashboardPage() {
 
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setUser(nextSession?.user ?? null);
+
+      if (!nextSession) {
+        setProfileSnapshot(null);
+      } else if (nextSession.access_token) {
+        void carregarPerfilPersistido(nextSession.access_token, true);
+      }
 
       if (!nextSession) {
         router.replace("/");
@@ -58,18 +117,40 @@ export default function DashboardPage() {
       mounted = false;
       data.subscription.unsubscribe();
     };
-  }, [router, supabase]);
+  }, [carregarPerfilPersistido, router, supabase]);
 
-  const profile = useMemo(() => {
-    const metadata = (user?.user_metadata ?? {}) as Record<string, unknown>;
+  async function handleOpenProfile() {
+    const nextProfile = profileSnapshot
+      ?? await carregarPerfilPersistido(undefined, false)
+      ?? criarPerfilDaSessao(user);
 
-    return {
-      nome: typeof metadata.nome === "string" ? metadata.nome : "",
-      email: user?.email ?? "",
-      dataNascimento: typeof metadata.dataNascimento === "string" ? metadata.dataNascimento : "",
-      cpf: typeof metadata.cpf === "string" ? metadata.cpf : "",
-    };
-  }, [user]);
+    if (!nextProfile.authUserId) {
+      return;
+    }
+
+    loadFromProfile(nextProfile);
+    setShowProfileModal(true);
+  }
+
+  async function handleProfileSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const result = await submitProfile(supabase);
+
+    if (!result || !result.backendUpdated) {
+      return;
+    }
+
+    if (result.sessionSynced && result.syncedUser) {
+      setUser(result.syncedUser);
+    }
+
+    const persistedProfile = await carregarPerfilPersistido(undefined, true);
+    const nextProfile = persistedProfile ?? result.profile;
+
+    setProfileSnapshot(nextProfile);
+    loadFromProfile(nextProfile);
+  }
 
   async function handleLogout() {
     if (!supabase) {
@@ -105,7 +186,7 @@ export default function DashboardPage() {
         <div className="flex items-center gap-2 md:gap-3">
           <button
             type="button"
-            onClick={() => setShowProfileModal(true)}
+            onClick={handleOpenProfile}
             aria-label="Meu perfil"
             title="Meu perfil"
             className="rounded-xl border border-[#f3d5b5]/45 bg-white px-3 py-2 text-sm font-semibold text-[#6a3a21] transition hover:border-[#6a3a21] hover:bg-[#6a3a21] hover:text-white"
@@ -152,51 +233,15 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {showProfileModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(33,14,6,0.55)] p-4">
-          <div className="w-full max-w-lg rounded-3xl border border-[#d8b089]/55 bg-[#fffaf4] p-6 shadow-[0_25px_60px_rgba(23,10,4,0.4)]">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-display text-3xl text-[#5c301b]">Meu Perfil</h2>
-              <button
-                type="button"
-                onClick={() => setShowProfileModal(false)}
-                className="rounded-lg border border-[#d4aa84]/55 bg-white px-3 py-1.5 text-sm font-semibold text-[#6a3a21] transition hover:border-[#6a3a21] hover:bg-[#6a3a21] hover:text-white"
-              >
-                Fechar
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <Field label="Nome" value={profile.nome} icon={<UserRound className="h-4 w-4" />} />
-              <Field label="Email" value={profile.email} />
-              <Field label="Data de nascimento" value={profile.dataNascimento} />
-              <Field label="CPF" value={profile.cpf} />
-            </div>
-          </div>
-        </div>
-      )}
+      <ProfileModal
+        open={showProfileModal}
+        formData={formData}
+        loading={profileLoading}
+        canSubmit={canSubmit}
+        onClose={() => setShowProfileModal(false)}
+        onChange={setField}
+        onSubmit={handleProfileSubmit}
+      />
     </main>
-  );
-}
-
-type FieldProps = {
-  label: string;
-  value: string;
-  icon?: ReactNode;
-};
-
-function Field({ label, value, icon }: FieldProps) {
-  return (
-    <label className="flex flex-col gap-1 text-sm text-[#5f311d]">
-      <span className="font-medium">{label}</span>
-      <div className="flex items-center gap-2 rounded-xl border border-[#9a6545]/30 bg-[#fffefc] px-3 py-2.5">
-        {icon}
-        <input
-          value={value}
-          readOnly
-          className="w-full bg-transparent text-[#3f1f11] outline-none"
-        />
-      </div>
-    </label>
   );
 }

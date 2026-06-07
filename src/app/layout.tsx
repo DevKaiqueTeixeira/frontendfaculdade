@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Manrope, Playfair_Display } from "next/font/google";
+import { NotifyProvider } from "@/components/providers/NotifyProvider";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -24,7 +25,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={`${manrope.variable} ${playfair.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <NotifyProvider />
+      </body>
     </html>
   );
 }

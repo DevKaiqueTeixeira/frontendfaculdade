@@ -37,3 +37,21 @@ body {
 .animate-float-card {
   animation: floatCard 7s ease-in-out infinite;
 }
+
+[data-sonner-toast][data-type="info"] {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1e3a8a;
+}
+
+[data-sonner-toast][data-type="success"] {
+  background: #ecfdf5;
+  border-color: #86efac;
+  color: #166534;
+}
+
+[data-sonner-toast][data-type="error"] {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}

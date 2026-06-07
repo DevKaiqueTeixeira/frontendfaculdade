@@ -1,7 +1,6 @@
 import { ComponentType, FormEvent } from "react";
 import Image from "next/image";
 import { CalendarDays, Coffee, IdCard, LockKeyhole, Mail, UserRound } from "lucide-react";
-import { CadastroStatus } from "@/components/cadastro/CadastroStatus";
 import cafeDetalhe from "@/assets/cafe2.png";
 
 type FormData = {
@@ -18,8 +17,6 @@ type CadastroUsuarioFormProps = {
   onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   loading: boolean;
   canSubmit: boolean;
-  statusType: "idle" | "success" | "error";
-  statusMessage: string;
 };
 
 export function CadastroUsuarioForm({
@@ -28,8 +25,6 @@ export function CadastroUsuarioForm({
   onSubmit,
   loading,
   canSubmit,
-  statusType,
-  statusMessage,
 }: CadastroUsuarioFormProps) {
   return (
     <section className="relative w-full max-w-xl overflow-hidden rounded-4xl border border-[#d8b089]/30 bg-[#fff9f1]/90 shadow-[0_34px_100px_rgba(20,8,2,0.5)] backdrop-blur-md">
@@ -65,9 +60,6 @@ export function CadastroUsuarioForm({
             type="date"
             required
           />
-
-          <CadastroStatus type={statusType} message={statusMessage} />
-
           <button
             type="submit"
             disabled={!canSubmit}
