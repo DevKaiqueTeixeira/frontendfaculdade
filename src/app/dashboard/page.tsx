@@ -6,9 +6,11 @@ import Image from "next/image";
 import { Coffee, LogOut, ShoppingBag, UserRound } from "lucide-react";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import logo4irmao from "@/assets/logo4imao.png";
+import AddressModal from "@/components/dashboard/AddressModal";
 import ProfileModal from "@/components/dashboard/ProfileModal";
 import { notify } from "@/services/notify";
 import { buscarPerfil, criarPerfilDaSessao } from "@/services/profile.service";
+import { useAddressStore } from "@/stores/useAddressStore";
 import { useProfileStore } from "@/stores/useProfileStore";
 import { getSupabaseClient } from "@/services/supabase";
 import type { ProfileFormData } from "@/types/profile";
@@ -26,6 +28,24 @@ export default function DashboardPage() {
     setField,
     submitProfile,
   } = useProfileStore();
+  const {
+    addresses,
+    canAddMore,
+    canSubmit: canSubmitAddress,
+    deletingAddressId,
+    deleteAddress,
+    formData: addressFormData,
+    loading: addressLoading,
+    loadAddresses,
+    modalOpen: addressModalOpen,
+    modalMode: addressModalMode,
+    closeModal: closeAddressModal,
+    openCreateModal: openCreateAddressModal,
+    openEditModal: openEditAddressModal,
+    setField: setAddressField,
+    submitAddress,
+    submitting: addressSubmitting,
+  } = useAddressStore();
 
   const { supabase, supabaseInitError } = useMemo<{ supabase: SupabaseClient | null; supabaseInitError: string }>(() => {
     try {
@@ -124,6 +144,8 @@ export default function DashboardPage() {
       ?? await carregarPerfilPersistido(undefined, false)
       ?? criarPerfilDaSessao(user);
 
+    await loadAddresses(supabase, true);
+
     if (!nextProfile.authUserId) {
       return;
     }
@@ -150,6 +172,15 @@ export default function DashboardPage() {
 
     setProfileSnapshot(nextProfile);
     loadFromProfile(nextProfile);
+  }
+
+  async function handleAddressSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await submitAddress(supabase);
+  }
+
+  async function handleAddressDelete(id: number) {
+    await deleteAddress(supabase, id);
   }
 
   async function handleLogout() {
@@ -236,11 +267,29 @@ export default function DashboardPage() {
       <ProfileModal
         open={showProfileModal}
         formData={formData}
+        addresses={addresses}
+        addressLoading={addressLoading}
+        canAddMoreAddresses={canAddMore}
+        deletingAddressId={deletingAddressId}
         loading={profileLoading}
         canSubmit={canSubmit}
         onClose={() => setShowProfileModal(false)}
+        onAddressOpen={openCreateAddressModal}
+        onAddressDelete={handleAddressDelete}
+        onAddressEdit={openEditAddressModal}
         onChange={setField}
         onSubmit={handleProfileSubmit}
+      />
+
+      <AddressModal
+        open={addressModalOpen}
+        formData={addressFormData}
+        mode={addressModalMode}
+        submitting={addressSubmitting}
+        canSubmit={canSubmitAddress}
+        onClose={closeAddressModal}
+        onChange={setAddressField}
+        onSubmit={handleAddressSubmit}
       />
     </main>
   );

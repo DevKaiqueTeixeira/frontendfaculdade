@@ -12,4 +12,18 @@ export const notify = {
   info(message: string) {
     toast.info(message);
   },
+
+  confirm(message: string, onConfirm: () => void, cancelLabel = "Cancelar", confirmLabel = "Excluir") {
+    toast.warning(message, {
+      action: {
+        label: confirmLabel,
+        onClick: onConfirm,
+      },
+      cancel: {
+        label: cancelLabel,
+        onClick: () => {},
+      },
+      duration: 8000,
+    });
+  },
 };
