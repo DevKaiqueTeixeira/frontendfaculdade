@@ -7,6 +7,7 @@ import { CalendarDays, Coffee, IdCard, LockKeyhole, LogIn, Mail, UserPlus, UserR
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import cafe from "@/assets/cafe.png";
 import background from "@/assets/background.png";
+import { isAdminEmail } from "@/lib/admin";
 import { cadastrarAuthCliente } from "@/services/auth.service";
 import { notify } from "@/services/notify";
 import { getSupabaseClient } from "@/services/supabase";
@@ -67,7 +68,7 @@ export default function Home() {
 
   useEffect(() => {
     if (session) {
-      router.replace("/dashboard");
+      router.replace(isAdminEmail(session.user.email) ? "/admin" : "/dashboard");
     }
   }, [router, session]);
 
@@ -127,7 +128,7 @@ export default function Home() {
 
       setLoginLoading(true);
 
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: loginForm.email,
         password: loginForm.senha,
       });
@@ -137,7 +138,7 @@ export default function Home() {
       }
 
       notify.success("Login realizado com sucesso.");
-      router.replace("/dashboard");
+      router.replace(isAdminEmail(data.user?.email) ? "/admin" : "/dashboard");
     } catch (error) {
       notify.error(error instanceof Error ? error.message : "Erro ao realizar login.");
     } finally {

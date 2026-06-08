@@ -8,6 +8,7 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 import logo4irmao from "@/assets/logo4imao.png";
 import AddressModal from "@/components/dashboard/AddressModal";
 import ProfileModal from "@/components/dashboard/ProfileModal";
+import { isAdminEmail } from "@/lib/admin";
 import { notify } from "@/services/notify";
 import { buscarPerfil, criarPerfilDaSessao } from "@/services/profile.service";
 import { useAddressStore } from "@/stores/useAddressStore";
@@ -108,6 +109,11 @@ export default function DashboardPage() {
       setUser(data.session?.user ?? null);
       setLoading(false);
 
+      if (isAdminEmail(data.session?.user.email)) {
+        router.replace("/admin");
+        return;
+      }
+
       if (data.session?.access_token) {
         void carregarPerfilPersistido(data.session.access_token, true);
       } else {
@@ -121,6 +127,11 @@ export default function DashboardPage() {
 
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setUser(nextSession?.user ?? null);
+
+      if (isAdminEmail(nextSession?.user.email)) {
+        router.replace("/admin");
+        return;
+      }
 
       if (!nextSession) {
         setProfileSnapshot(null);
