@@ -2,6 +2,7 @@
 
 import type { FormEvent, ReactNode } from "react";
 import { CalendarDays, Home, IdCard, Mail, Pencil, Plus, Trash2, UserRound } from "lucide-react";
+import { removeEmoji } from "@/lib/removeEmoji";
 import type { AddressPreview } from "@/types/address";
 import type { ProfileFormData } from "@/types/profile";
 
@@ -191,7 +192,7 @@ function Field({ label, value, onChange, icon, type = "text" }: FieldProps) {
         <input
           type={type}
           value={value}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(event) => onChange(removeEmoji(event.target.value))}
           required
           className="w-full bg-transparent text-[#3f1f11] outline-none"
         />

@@ -8,12 +8,42 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 import cafe from "@/assets/cafe2.png";
 import AdditionalModal from "@/components/admin/AdditionalModal";
 import { isAdminEmail } from "@/lib/admin";
+import { removeEmoji } from "@/lib/removeEmoji";
 import { buscarAdicionaisPorProduto, cadastrarAdicional, excluirAdicional } from "@/services/additional.service";
 import { notify } from "@/services/notify";
-import { atualizarProduto, buscarProdutos, cadastrarProduto, excluirProduto } from "@/services/product.service";
+import { atualizarProduto, buildProductImageUrl, buscarProdutos, cadastrarProduto, excluirProduto } from "@/services/product.service";
 import { getSupabaseClient } from "@/services/supabase";
 import type { AdditionalPreview } from "@/types/additional";
 import type { ProductPreview } from "@/types/product";
+
+const brlFormatter = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+});
+
+function formatCurrencyInput(value: string) {
+  const digits = value.replace(/\D/g, "");
+
+  if (!digits) {
+    return "";
+  }
+
+  return brlFormatter.format(Number(digits) / 100);
+}
+
+function formatCurrencyValue(value: number) {
+  return brlFormatter.format(value);
+}
+
+function parseCurrencyInput(value: string) {
+  const digits = value.replace(/\D/g, "");
+
+  if (!digits) {
+    return Number.NaN;
+  }
+
+  return Number(digits) / 100;
+}
 
 export default function AdminPage() {
   const router = useRouter();
@@ -26,6 +56,7 @@ export default function AdminPage() {
   const [productsLoading, setProductsLoading] = useState(false);
   const [deletingProductId, setDeletingProductId] = useState<number | null>(null);
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
+  const [imageInputKey, setImageInputKey] = useState(0);
   const [selectedProductForAdditional, setSelectedProductForAdditional] = useState<ProductPreview | null>(null);
   const [additionalsByProduct, setAdditionalsByProduct] = useState<Record<number, AdditionalPreview[]>>({});
   const [products, setProducts] = useState<ProductPreview[]>([]);
@@ -37,6 +68,7 @@ export default function AdminPage() {
     nome: "",
     preco: "",
   });
+  const [productImage, setProductImage] = useState<File | null>(null);
 
   const { supabase, supabaseInitError } = useMemo<{ supabase: SupabaseClient | null; supabaseInitError: string }>(() => {
     try {
@@ -111,16 +143,28 @@ export default function AdminPage() {
   }
 
   function setField(field: keyof typeof form, value: string) {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    const sanitizedValue = removeEmoji(value);
+
+    setForm((prev) => ({
+      ...prev,
+      [field]: field === "preco" ? formatCurrencyInput(sanitizedValue) : sanitizedValue,
+    }));
   }
 
   function resetForm() {
     setForm({ nome: "", preco: "" });
+    setProductImage(null);
+    setImageInputKey((prev) => prev + 1);
     setEditingProductId(null);
   }
 
   function setAdditionalField(field: keyof typeof additionalForm, value: string) {
-    setAdditionalForm((prev) => ({ ...prev, [field]: value }));
+    const sanitizedValue = removeEmoji(value);
+
+    setAdditionalForm((prev) => ({
+      ...prev,
+      [field]: field === "preco" ? formatCurrencyInput(sanitizedValue) : sanitizedValue,
+    }));
   }
 
   function resetAdditionalForm() {
@@ -197,9 +241,10 @@ export default function AdminPage() {
   function startEdit(product: ProductPreview) {
     setActiveView("cadastro");
     setEditingProductId(product.id);
+    setProductImage(null);
     setForm({
-      nome: product.nome,
-      preco: product.preco.toFixed(2),
+      nome: removeEmoji(product.nome),
+      preco: formatCurrencyValue(product.preco),
     });
   }
 
@@ -262,7 +307,7 @@ export default function AdminPage() {
         throw new Error("Sessao expirada. Faca login novamente.");
       }
 
-      const precoNormalizado = Number(additionalForm.preco.replace(",", "."));
+      const precoNormalizado = parseCurrencyInput(additionalForm.preco);
 
       if (!Number.isFinite(precoNormalizado)) {
         throw new Error("Preco invalido.");
@@ -270,7 +315,7 @@ export default function AdminPage() {
 
       const response = await cadastrarAdicional(
         {
-          nome: additionalForm.nome,
+          nome: removeEmoji(additionalForm.nome),
           preco: precoNormalizado,
           produtoId: selectedProductForAdditional.id,
         },
@@ -332,16 +377,21 @@ export default function AdminPage() {
         throw new Error("Sessao expirada. Faca login novamente.");
       }
 
-      const precoNormalizado = Number(form.preco.replace(",", "."));
+      const precoNormalizado = parseCurrencyInput(form.preco);
 
       if (!Number.isFinite(precoNormalizado)) {
         throw new Error("Preco invalido.");
       }
 
       const payload = {
-        nome: form.nome,
+        nome: removeEmoji(form.nome),
         preco: precoNormalizado,
+        imagem: productImage,
       };
+
+      if (!editingProductId && !productImage) {
+        throw new Error("Imagem do produto e obrigatoria.");
+      }
 
       const response = editingProductId
         ? await atualizarProduto(editingProductId, payload, accessToken)
@@ -452,6 +502,7 @@ export default function AdminPage() {
                         type="text"
                         value={form.nome}
                         onChange={(event) => setField("nome", event.target.value)}
+                        placeholder="Digite o nome do produto"
                         required
                         className="rounded-xl border border-[#985b39]/25 bg-[#fffefc]/90 px-3 py-2.5 text-sm text-[#3f1f11] outline-none transition focus:border-[#7a3f22] focus:ring-4 focus:ring-[#d0a489]/35"
                       />
@@ -460,10 +511,9 @@ export default function AdminPage() {
                     <label className="flex flex-col gap-1 text-sm text-[#5b2f19]">
                       <span className="font-medium">Preço</span>
                       <input
-                        type="number"
+                        type="text"
                         inputMode="decimal"
-                        step="0.01"
-                        min="0.01"
+                        placeholder="R$ 0,00"
                         value={form.preco}
                         onChange={(event) => setField("preco", event.target.value)}
                         required
@@ -471,11 +521,26 @@ export default function AdminPage() {
                       />
                     </label>
 
+                    <label className="flex flex-col gap-1 text-sm text-[#5b2f19]">
+                      <span className="font-medium">Imagem do produto</span>
+                      <input
+                        key={imageInputKey}
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/webp"
+                        required={!editingProductId}
+                        onChange={(event) => setProductImage(event.target.files?.[0] ?? null)}
+                        className="rounded-xl border border-[#985b39]/25 bg-[#fffefc]/90 px-3 py-2.5 text-sm text-[#3f1f11] outline-none transition file:mr-3 file:rounded-lg file:border-0 file:bg-[#6a3a21] file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[#4f2814] focus:border-[#7a3f22] focus:ring-4 focus:ring-[#d0a489]/35"
+                      />
+                      <span className="text-xs text-[#8a5332]">
+                        {editingProductId ? "Selecione uma nova imagem apenas se quiser substituir a atual." : "Selecione a imagem que sera exibida ao cliente."}
+                      </span>
+                    </label>
+
                     <div className="flex flex-col gap-3 sm:flex-row">
                       <button
                         type="submit"
                         disabled={submitLoading}
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(120deg,#7a3f22,#4f2814)] px-4 py-3 text-sm font-semibold text-[#fff7ed] shadow-[0_10px_24px_rgba(66,32,16,0.35)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(120deg,#7a3f22,#4f2814)] px-4 py-2.5 text-sm font-semibold text-[#fff7ed] shadow-[0_10px_24px_rgba(66,32,16,0.35)] transition hover:bg-[linear-gradient(120deg,#8f4b2a,#5f311b)] hover:shadow-[0_14px_28px_rgba(66,32,16,0.42)] disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <Package className="h-4 w-4" />
                         {submitLoading ? (editingProductId ? "Salvando..." : "Cadastrando...") : (editingProductId ? "Salvar alterações" : "Cadastrar produto")}
@@ -532,9 +597,26 @@ export default function AdminPage() {
                         className="rounded-2xl border border-[#ead2b7] bg-[#fffaf4] p-4 shadow-[0_10px_24px_rgba(78,43,23,0.08)]"
                       >
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                          <div>
-                            <p className="text-lg font-semibold text-[#4b2616]">{product.nome}</p>
-                            <p className="mt-1 text-sm text-[#8a5332]">R$ {product.preco.toFixed(2).replace(".", ",")}</p>
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#e6c7a9] bg-white">
+                              {product.imagemUrl ? (
+                                <div className="relative h-full w-full">
+                                  <Image
+                                    src={buildProductImageUrl(product.imagemUrl) || ""}
+                                    alt={product.nome}
+                                    fill
+                                    unoptimized
+                                    className="object-cover"
+                                  />
+                                </div>
+                              ) : (
+                                <span className="text-sm font-semibold uppercase text-[#8a5332]">{product.nome.slice(0, 2)}</span>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-lg font-semibold text-[#4b2616]">{product.nome}</p>
+                              <p className="mt-1 text-sm text-[#8a5332]">R$ {product.preco.toFixed(2).replace(".", ",")}</p>
+                            </div>
                           </div>
 
                           <div className="flex flex-wrap gap-2">

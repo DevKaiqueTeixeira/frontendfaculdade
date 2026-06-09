@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { removeEmoji } from "@/lib/removeEmoji";
 import { notify } from "@/services/notify";
 import { atualizarEndereco, buscarEnderecos, cadastrarEndereco, excluirEndereco } from "@/services/address.service";
 import type { AddressFormData, AddressModalMode, AddressPreview } from "@/types/address";
@@ -33,7 +34,7 @@ export function useAddressStore() {
   const canAddMore = useMemo(() => addresses.length < 2, [addresses.length]);
 
   function setField(field: keyof AddressFormData, value: string) {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: removeEmoji(value) }));
   }
 
   function openCreateModal() {
@@ -51,7 +52,7 @@ export function useAddressStore() {
   function openEditModal(address: AddressPreview) {
     setModalMode("edit");
     setEditingAddressId(address.id);
-    setFormData({
+    setFormData(normalizeFormData({
       cep: address.cep,
       logradouro: address.logradouro,
       numero: address.numero,
@@ -62,7 +63,7 @@ export function useAddressStore() {
       pais: address.pais,
       pontoReferencia: address.pontoReferencia,
       tipoEndereco: address.tipoEndereco,
-    });
+    }));
     setModalOpen(true);
   }
 
@@ -218,16 +219,16 @@ async function getAccessToken(supabase: SupabaseClient): Promise<string> {
 
 function normalizeFormData(formData: AddressFormData): AddressFormData {
   return {
-    cep: formData.cep.replace(/\D/g, ""),
-    logradouro: formData.logradouro.trim(),
-    numero: formData.numero.trim(),
-    complemento: formData.complemento.trim(),
-    bairro: formData.bairro.trim(),
-    cidade: formData.cidade.trim(),
-    estado: formData.estado.trim().toUpperCase(),
-    pais: formData.pais.trim(),
-    pontoReferencia: formData.pontoReferencia.trim(),
-    tipoEndereco: formData.tipoEndereco.trim(),
+    cep: removeEmoji(formData.cep).replace(/\D/g, ""),
+    logradouro: removeEmoji(formData.logradouro).trim(),
+    numero: removeEmoji(formData.numero).trim(),
+    complemento: removeEmoji(formData.complemento).trim(),
+    bairro: removeEmoji(formData.bairro).trim(),
+    cidade: removeEmoji(formData.cidade).trim(),
+    estado: removeEmoji(formData.estado).trim().toUpperCase(),
+    pais: removeEmoji(formData.pais).trim(),
+    pontoReferencia: removeEmoji(formData.pontoReferencia).trim(),
+    tipoEndereco: removeEmoji(formData.tipoEndereco).trim(),
   };
 }
 

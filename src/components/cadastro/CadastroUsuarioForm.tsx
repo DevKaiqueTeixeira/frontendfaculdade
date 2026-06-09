@@ -2,6 +2,7 @@ import { ComponentType, FormEvent } from "react";
 import Image from "next/image";
 import { CalendarDays, Coffee, IdCard, LockKeyhole, Mail, UserRound } from "lucide-react";
 import cafeDetalhe from "@/assets/cafe2.png";
+import { removeEmoji } from "@/lib/removeEmoji";
 
 type FormData = {
   nome: string;
@@ -92,7 +93,7 @@ function Input({ label, icon: Icon, value, onChange, type = "text", required = f
           type={type}
           value={value}
           required={required}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(event) => onChange(removeEmoji(event.target.value))}
           className="w-full bg-transparent text-[#3f1f11] outline-none"
         />
       </div>

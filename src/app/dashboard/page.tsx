@@ -10,15 +10,19 @@ import AddressModal from "@/components/dashboard/AddressModal";
 import ProfileModal from "@/components/dashboard/ProfileModal";
 import { isAdminEmail } from "@/lib/admin";
 import { notify } from "@/services/notify";
+import { buildProductImageUrl, buscarProdutos } from "@/services/product.service";
 import { buscarPerfil, criarPerfilDaSessao } from "@/services/profile.service";
 import { useAddressStore } from "@/stores/useAddressStore";
 import { useProfileStore } from "@/stores/useProfileStore";
 import { getSupabaseClient } from "@/services/supabase";
 import type { ProfileFormData } from "@/types/profile";
+import type { ProductPreview } from "@/types/product";
 
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [products, setProducts] = useState<ProductPreview[]>([]);
+  const [productsLoading, setProductsLoading] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileSnapshot, setProfileSnapshot] = useState<ProfileFormData | null>(null);
   const {
@@ -94,6 +98,22 @@ export default function DashboardPage() {
     }
   }, [supabase]);
 
+  const carregarProdutos = useCallback(async (accessToken?: string, silent = false): Promise<void> => {
+    try {
+      setProductsLoading(true);
+      const nextProducts = await buscarProdutos(accessToken);
+      setProducts(nextProducts);
+    } catch (error) {
+      setProducts([]);
+
+      if (!silent) {
+        notify.error(error instanceof Error ? error.message : "Nao foi possivel carregar os produtos.");
+      }
+    } finally {
+      setProductsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!supabase) {
       return;
@@ -116,8 +136,10 @@ export default function DashboardPage() {
 
       if (data.session?.access_token) {
         void carregarPerfilPersistido(data.session.access_token, true);
+        void carregarProdutos(data.session.access_token, false);
       } else {
         setProfileSnapshot(null);
+        setProducts([]);
       }
 
       if (!data.session) {
@@ -135,8 +157,10 @@ export default function DashboardPage() {
 
       if (!nextSession) {
         setProfileSnapshot(null);
+        setProducts([]);
       } else if (nextSession.access_token) {
         void carregarPerfilPersistido(nextSession.access_token, true);
+        void carregarProdutos(nextSession.access_token, false);
       }
 
       if (!nextSession) {
@@ -148,7 +172,7 @@ export default function DashboardPage() {
       mounted = false;
       data.subscription.unsubscribe();
     };
-  }, [carregarPerfilPersistido, router, supabase]);
+  }, [carregarPerfilPersistido, carregarProdutos, router, supabase]);
 
   async function handleOpenProfile() {
     const nextProfile = profileSnapshot
@@ -256,21 +280,65 @@ export default function DashboardPage() {
       </nav>
 
       <section className="mx-auto mt-6 grid w-full max-w-6xl gap-6 lg:grid-cols-[1.1fr_1fr]">
-        <article className="relative min-h-[32rem] overflow-hidden rounded-3xl border border-[#d8b089]/35 shadow-[0_24px_60px_rgba(20,8,3,0.25)]">
+        <article className="relative min-h-[38rem] overflow-hidden rounded-3xl border border-[#d8b089]/35 shadow-[0_24px_60px_rgba(20,8,3,0.25)]">
           <Image src={logo4irmao} alt="Logo 4 Irmãos" fill className="object-contain object-center p-8 md:p-10" />
           <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(32,14,6,0.56),rgba(57,27,15,0.4))]" />
         </article>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-6">
           <article className="rounded-3xl border border-[#e2c4a5]/45 bg-[#fffaf4] p-6 shadow-[0_14px_36px_rgba(64,34,18,0.12)] md:p-8">
-            <p className="text-xs tracking-[0.2em] text-[#a26a45] uppercase">Área do Cliente</p>
-            <h1 className="font-display mt-2 text-4xl text-[#4b2616] md:text-5xl">Bem-vindo, {profile.nome || "cliente"}</h1>
-            <p className="mt-3 text-[#6d4027]">Seu acesso está ativo. Use o menu acima para abrir seu perfil ou sair da sessão.</p>
+            <p className="text-xs tracking-[0.2em] text-[#a26a45] uppercase">Área do Cliente . Bem-vindo</p>
+            <h1 className="font-display mt-2 text-4xl text-[#4b2616] md:text-5xl">{profile.nome || "cliente"}</h1>
+            <p className="mt-3 text-[#6d4027]">Escolha um produto cadastrado pela cafeteria para continuar navegando.</p>
           </article>
-
           <article className="rounded-3xl border border-[#ddb58e]/45 bg-white p-6 shadow-[0_14px_36px_rgba(64,34,18,0.12)] md:p-8">
-            <p className="text-xs text-[#9b6644]">Usuário autenticado</p>
-            <p className="mt-1 text-sm font-semibold text-[#4b2616]">{profile.email || "Sem email na sessão"}</p>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs tracking-[0.2em] text-[#a26a45] uppercase">Cardápio</p>
+                <h2 className="mt-2 text-2xl font-semibold text-[#4b2616]">Produtos disponíveis</h2>
+              </div>
+              <span className="rounded-full bg-[#f7e4d1] px-3 py-1 text-xs font-semibold text-[#8a5332]">
+                {products.length} item{products.length === 1 ? "" : "s"}
+              </span>
+            </div>
+
+            {productsLoading ? (
+              <p className="mt-6 text-sm text-[#6d4027]">Carregando produtos...</p>
+            ) : products.length === 0 ? (
+              <p className="mt-6 rounded-2xl border border-dashed border-[#ddb58e] bg-[#fffaf4] px-4 py-5 text-sm text-[#6d4027]">
+                Nenhum produto cadastrado ainda.
+              </p>
+            ) : (
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                {products.map((product) => (
+                  <button
+                    key={product.id}
+                    type="button"
+                    className="flex items-center gap-4 rounded-2xl border border-[#ead2b7] bg-[#fffaf4] p-5 text-left shadow-[0_10px_24px_rgba(78,43,23,0.08)] transition hover:-translate-y-0.5 hover:border-[#c78656] hover:shadow-[0_16px_32px_rgba(78,43,23,0.14)]"
+                  >
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#e6c7a9] bg-white">
+                      {product.imagemUrl ? (
+                        <div className="relative h-full w-full">
+                          <Image
+                            src={buildProductImageUrl(product.imagemUrl) || ""}
+                            alt={product.nome}
+                            fill
+                            unoptimized
+                            className="object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-sm font-semibold uppercase text-[#8a5332]">{product.nome.slice(0, 2)}</span>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-lg font-semibold text-[#4b2616]">{product.nome}</p>
+                      <p className="mt-2 text-sm text-[#8a5332]">R$ {product.preco.toFixed(2).replace(".", ",")}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </article>
         </div>
       </section>

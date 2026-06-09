@@ -5,7 +5,7 @@ import { Toaster } from "sonner";
 export function NotifyProvider() {
   return (
     <Toaster
-      position="top-center"
+      position="top-right"
       richColors
       closeButton
       expand

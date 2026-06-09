@@ -8,6 +8,7 @@ import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import cafe from "@/assets/cafe.png";
 import background from "@/assets/background.png";
 import { isAdminEmail } from "@/lib/admin";
+import { removeEmoji } from "@/lib/removeEmoji";
 import { cadastrarAuthCliente } from "@/services/auth.service";
 import { notify } from "@/services/notify";
 import { getSupabaseClient } from "@/services/supabase";
@@ -79,11 +80,11 @@ export default function Home() {
   }, [supabaseInitError]);
 
   function setCadastroField(field: keyof typeof cadastroForm, value: string) {
-    setCadastroForm((prev) => ({ ...prev, [field]: value }));
+    setCadastroForm((prev) => ({ ...prev, [field]: removeEmoji(value) }));
   }
 
   function setLoginField(field: keyof typeof loginForm, value: string) {
-    setLoginForm((prev) => ({ ...prev, [field]: value }));
+    setLoginForm((prev) => ({ ...prev, [field]: removeEmoji(value) }));
   }
 
   async function handleCadastro(event: FormEvent<HTMLFormElement>) {
@@ -188,7 +189,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("login")}
-                  className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${activeTab === "login" ? "bg-[#6a3a21] text-[#fff7ed]" : "text-[#6a3a21]"
+                  className={`rounded-lg px-3 py-2 text-sm font-semibold transition hover:brightness-105 ${activeTab === "login" ? "bg-[#6a3a21] text-[#fff7ed]" : "text-[#6a3a21] hover:bg-white/65"
                     }`}
                 >
                   Login
@@ -196,7 +197,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("cadastro")}
-                  className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${activeTab === "cadastro" ? "bg-[#6a3a21] text-[#fff7ed]" : "text-[#6a3a21]"
+                  className={`rounded-lg px-3 py-2 text-sm font-semibold transition hover:brightness-105 ${activeTab === "cadastro" ? "bg-[#6a3a21] text-[#fff7ed]" : "text-[#6a3a21] hover:bg-white/65"
                     }`}
                 >
                   Cadastro
@@ -205,19 +206,20 @@ export default function Home() {
 
               {activeTab === "login" ? (
                 <form onSubmit={handleLogin} className="mt-5 space-y-3">
-                  <Input label="Email" icon={Mail} value={loginForm.email} onChange={(v) => setLoginField("email", v)} type="email" required />
+                  <Input label="Email" icon={Mail} value={loginForm.email} onChange={(v) => setLoginField("email", v)} type="email" placeholder="Digite seu email" required />
                   <Input
                     label="Senha"
                     icon={LockKeyhole}
                     value={loginForm.senha}
                     onChange={(v) => setLoginField("senha", v)}
                     type="password"
+                    placeholder="Digite sua senha"
                     required
                   />
                   <button
                     type="submit"
                     disabled={loginLoading}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(120deg,#7a3f22,#4f2814)] px-4 py-2.5 font-semibold text-[#fff7ed] shadow-[0_10px_24px_rgba(66,32,16,0.35)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(120deg,#7a3f22,#4f2814)] px-4 py-2.5 font-semibold text-[#fff7ed] shadow-[0_10px_24px_rgba(66,32,16,0.35)] transition hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <LogIn className="h-4 w-4" />
                     {loginLoading ? "Entrando..." : "Entrar"}
@@ -225,15 +227,16 @@ export default function Home() {
                 </form>
               ) : (
                 <form onSubmit={handleCadastro} className="mt-5 space-y-3">
-                  <Input label="Nome" icon={UserRound} value={cadastroForm.nome} onChange={(v) => setCadastroField("nome", v)} required />
-                  <Input label="CPF" icon={IdCard} value={cadastroForm.cpf} onChange={(v) => setCadastroField("cpf", v)} required />
-                  <Input label="Email" icon={Mail} value={cadastroForm.email} onChange={(v) => setCadastroField("email", v)} type="email" required />
+                  <Input label="Nome" icon={UserRound} value={cadastroForm.nome} onChange={(v) => setCadastroField("nome", v)} placeholder="Digite seu nome completo" required />
+                  <Input label="CPF" icon={IdCard} value={cadastroForm.cpf} onChange={(v) => setCadastroField("cpf", v)} placeholder="000.000.000-00" required />
+                  <Input label="Email" icon={Mail} value={cadastroForm.email} onChange={(v) => setCadastroField("email", v)} type="email" placeholder="Digite seu email" required />
                   <Input
                     label="Senha"
                     icon={LockKeyhole}
                     value={cadastroForm.senha}
                     onChange={(v) => setCadastroField("senha", v)}
                     type="password"
+                    placeholder="Crie uma senha"
                     required
                   />
                   <Input
@@ -242,12 +245,13 @@ export default function Home() {
                     value={cadastroForm.dataNascimento}
                     onChange={(v) => setCadastroField("dataNascimento", v)}
                     type="date"
+                    placeholder="Selecione a data"
                     required
                   />
                   <button
                     type="submit"
                     disabled={cadastroLoading}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(120deg,#7a3f22,#4f2814)] px-4 py-2.5 font-semibold text-[#fff7ed] shadow-[0_10px_24px_rgba(66,32,16,0.35)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(120deg,#7a3f22,#4f2814)] px-4 py-2.5 font-semibold text-[#fff7ed] shadow-[0_10px_24px_rgba(66,32,16,0.35)] transition hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <UserPlus className="h-4 w-4" />
                     {cadastroLoading ? "Cadastrando..." : "Cadastrar"}
@@ -268,11 +272,12 @@ type InputProps = {
   icon: ComponentType<{ className?: string }>;
   value: string;
   onChange: (value: string) => void;
+  placeholder?: string;
   type?: string;
   required?: boolean;
 };
 
-function Input({ label, icon: Icon, value, onChange, type = "text", required = false }: InputProps) {
+function Input({ label, icon: Icon, value, onChange, placeholder, type = "text", required = false }: InputProps) {
   return (
     <label className="flex flex-col gap-1 text-sm text-[#5b2f19]">
       <span className="font-medium">{label}</span>
@@ -282,8 +287,9 @@ function Input({ label, icon: Icon, value, onChange, type = "text", required = f
           type={type}
           value={value}
           required={required}
-          onChange={(event) => onChange(event.target.value)}
-          className="w-full bg-transparent text-[#3f1f11] outline-none"
+          placeholder={placeholder}
+          onChange={(event) => onChange(removeEmoji(event.target.value))}
+          className="w-full bg-transparent text-[#3f1f11] outline-none placeholder:text-[#9b7d68]"
         />
       </div>
     </label>
