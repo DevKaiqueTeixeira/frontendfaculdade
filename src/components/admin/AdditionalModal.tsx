@@ -1,6 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
+import { removeEmoji } from "@/lib/removeEmoji";
 import type { AdditionalFormData } from "@/types/additional";
 
 type AdditionalModalProps = {
@@ -49,7 +50,8 @@ export default function AdditionalModal({
             <span className="font-medium">Nome do adicional</span>
             <input
               value={formData.nome}
-              onChange={(event) => onChange("nome", event.target.value)}
+              onChange={(event) => onChange("nome", removeEmoji(event.target.value))}
+              placeholder="Digite o nome do adicional"
               required
               className="rounded-xl border border-[#9a6545]/30 bg-[#fffefc] px-3 py-2.5 text-[#3f1f11] outline-none transition focus:border-[#7a3f22] focus:ring-4 focus:ring-[#d0a489]/35"
             />
@@ -58,12 +60,11 @@ export default function AdditionalModal({
           <label className="flex flex-col gap-1 text-sm text-[#5f311d]">
             <span className="font-medium">Preço do adicional</span>
             <input
-              type="number"
+              type="text"
               inputMode="decimal"
-              step="0.01"
-              min="0.01"
+              placeholder="R$ 0,00"
               value={formData.preco}
-              onChange={(event) => onChange("preco", event.target.value)}
+              onChange={(event) => onChange("preco", removeEmoji(event.target.value))}
               required
               className="rounded-xl border border-[#9a6545]/30 bg-[#fffefc] px-3 py-2.5 text-[#3f1f11] outline-none transition focus:border-[#7a3f22] focus:ring-4 focus:ring-[#d0a489]/35"
             />

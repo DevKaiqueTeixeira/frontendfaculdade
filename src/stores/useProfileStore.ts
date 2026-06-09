@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
+import { removeEmoji } from "@/lib/removeEmoji";
 import { notify } from "@/services/notify";
 import {
   atualizarPerfil,
@@ -31,11 +32,11 @@ export function useProfileStore() {
   const canSubmit = useMemo(() => !loading, [loading]);
 
   function setField(field: keyof ProfileFormData, value: string) {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: removeEmoji(value) }));
   }
 
   function loadFromProfile(profile: ProfileFormData) {
-    setFormData(profile);
+    setFormData(normalizeFormData(profile));
   }
 
   async function submitProfile(supabase: SupabaseClient | null): Promise<UpdateProfileResult | null> {
@@ -105,11 +106,11 @@ export function useProfileStore() {
 
 function normalizeFormData(formData: ProfileFormData): ProfileFormData {
   return {
-    authUserId: formData.authUserId.trim(),
-    nome: formData.nome.trim(),
-    cpf: normalizeCpf(formData.cpf),
-    email: formData.email.trim().toLowerCase(),
-    dataNascimento: formData.dataNascimento.trim(),
+    authUserId: removeEmoji(formData.authUserId).trim(),
+    nome: removeEmoji(formData.nome).trim(),
+    cpf: normalizeCpf(removeEmoji(formData.cpf)),
+    email: removeEmoji(formData.email).trim().toLowerCase(),
+    dataNascimento: removeEmoji(formData.dataNascimento).trim(),
   };
 }
 

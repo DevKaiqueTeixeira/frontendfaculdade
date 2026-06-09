@@ -2,6 +2,7 @@
 
 import type { FormEvent, ReactNode } from "react";
 import { Home, MapPin } from "lucide-react";
+import { removeEmoji } from "@/lib/removeEmoji";
 import type { AddressFormData, AddressModalMode } from "@/types/address";
 
 type AddressModalProps = {
@@ -139,7 +140,7 @@ function Field({ label, value, onChange, icon, required = true }: FieldProps) {
         {icon}
         <input
           value={value}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(event) => onChange(removeEmoji(event.target.value))}
           required={required}
           className="w-full bg-transparent text-[#3f1f11] outline-none"
         />
