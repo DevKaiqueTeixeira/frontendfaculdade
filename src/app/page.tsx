@@ -7,7 +7,9 @@ import { CalendarDays, Coffee, IdCard, LockKeyhole, LogIn, Mail, UserPlus, UserR
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import cafe from "@/assets/cafe.png";
 import background from "@/assets/background.png";
+import { isAdminEmail } from "@/lib/admin";
 import { cadastrarAuthCliente } from "@/services/auth.service";
+import { notify } from "@/services/notify";
 import { getSupabaseClient } from "@/services/supabase";
 
 export default function Home() {
@@ -15,8 +17,6 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<"cadastro" | "login">("login");
   const [cadastroLoading, setCadastroLoading] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
-  const [statusMessage, setStatusMessage] = useState("");
-  const [statusType, setStatusType] = useState<"idle" | "success" | "error">("idle");
   const [session, setSession] = useState<Session | null>(null);
   const [cadastroForm, setCadastroForm] = useState({
     nome: "",
@@ -68,9 +68,15 @@ export default function Home() {
 
   useEffect(() => {
     if (session) {
-      router.replace("/dashboard");
+      router.replace(isAdminEmail(session.user.email) ? "/admin" : "/dashboard");
     }
   }, [router, session]);
+
+  useEffect(() => {
+    if (supabaseInitError) {
+      notify.error(supabaseInitError);
+    }
+  }, [supabaseInitError]);
 
   function setCadastroField(field: keyof typeof cadastroForm, value: string) {
     setCadastroForm((prev) => ({ ...prev, [field]: value }));
@@ -82,8 +88,6 @@ export default function Home() {
 
   async function handleCadastro(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setStatusMessage("");
-    setStatusType("idle");
 
     try {
       setCadastroLoading(true);
@@ -96,8 +100,7 @@ export default function Home() {
         dataNascimento: cadastroForm.dataNascimento,
       });
 
-      setStatusType("success");
-      setStatusMessage(
+      notify.success(
         `Usuário criado no Auth e cliente #${cliente.id} cadastrado com sucesso.`,
       );
       setCadastroForm({
@@ -109,8 +112,7 @@ export default function Home() {
       });
       setActiveTab("login");
     } catch (error) {
-      setStatusType("error");
-      setStatusMessage(error instanceof Error ? error.message : "Erro ao cadastrar usuário.");
+      notify.error(error instanceof Error ? error.message : "Erro ao cadastrar usuário.");
     } finally {
       setCadastroLoading(false);
     }
@@ -118,8 +120,6 @@ export default function Home() {
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setStatusMessage("");
-    setStatusType("idle");
 
     try {
       if (!supabase) {
@@ -128,7 +128,7 @@ export default function Home() {
 
       setLoginLoading(true);
 
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: loginForm.email,
         password: loginForm.senha,
       });
@@ -137,12 +137,10 @@ export default function Home() {
         throw new Error(error.message);
       }
 
-      setStatusType("success");
-      setStatusMessage("Login realizado. Sessão ativa carregada abaixo para teste.");
-      router.replace("/dashboard");
+      notify.success("Login realizado com sucesso.");
+      router.replace(isAdminEmail(data.user?.email) ? "/admin" : "/dashboard");
     } catch (error) {
-      setStatusType("error");
-      setStatusMessage(error instanceof Error ? error.message : "Erro ao realizar login.");
+      notify.error(error instanceof Error ? error.message : "Erro ao realizar login.");
     } finally {
       setLoginLoading(false);
     }
@@ -255,21 +253,6 @@ export default function Home() {
                     {cadastroLoading ? "Cadastrando..." : "Cadastrar"}
                   </button>
                 </form>
-              )}
-
-              {(statusMessage || supabaseInitError) && (
-                <p
-                  className={`mt-4 rounded-xl border px-4 py-3 text-sm ${supabaseInitError
-                    ? "border-rose-400/40 bg-rose-100 text-rose-900"
-                    : statusType === "success"
-                      ? "border-emerald-400/40 bg-emerald-100 text-emerald-900"
-                      : statusType === "error"
-                        ? "border-rose-400/40 bg-rose-100 text-rose-900"
-                        : "border-slate-300 bg-slate-100 text-slate-900"
-                    }`}
-                >
-                  {statusMessage || supabaseInitError}
-                </p>
               )}
 
             </div>

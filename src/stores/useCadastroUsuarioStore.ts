@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { cadastrarCliente } from "@/services/cliente.service";
+import { notify } from "@/services/notify";
 
 type FormData = {
   nome: string;
@@ -10,8 +11,6 @@ type FormData = {
   email: string;
   dataNascimento: string;
 };
-
-type StatusType = "idle" | "success" | "error";
 
 const initialForm: FormData = {
   nome: "",
@@ -24,8 +23,6 @@ const initialForm: FormData = {
 export function useCadastroUsuarioStore() {
   const [formData, setFormData] = useState<FormData>(initialForm);
   const [loading, setLoading] = useState(false);
-  const [statusType, setStatusType] = useState<StatusType>("idle");
-  const [statusMessage, setStatusMessage] = useState("");
 
   const canSubmit = useMemo(() => !loading, [loading]);
 
@@ -38,8 +35,6 @@ export function useCadastroUsuarioStore() {
 
     try {
       setLoading(true);
-      setStatusType("idle");
-      setStatusMessage("");
 
       const cliente = await cadastrarCliente({
         nome: formData.nome,
@@ -49,15 +44,13 @@ export function useCadastroUsuarioStore() {
         dataNascimento: formData.dataNascimento,
       });
 
-      setStatusType("success");
-      setStatusMessage(`Cadastro concluído. Cliente #${cliente.id} criado com sucesso.`);
+      notify.success(`Cadastro concluído. Cliente #${cliente.id} criado com sucesso.`);
       setFormData(initialForm);
     } catch (error) {
-      setStatusType("error");
       if (error instanceof Error && error.message) {
-        setStatusMessage(error.message);
+        notify.error(error.message);
       } else {
-        setStatusMessage("Não foi possível concluir o cadastro.");
+        notify.error("Não foi possível concluir o cadastro.");
       }
     } finally {
       setLoading(false);
@@ -70,7 +63,5 @@ export function useCadastroUsuarioStore() {
     cadastrarUsuario,
     loading,
     canSubmit,
-    statusType,
-    statusMessage,
   };
 }
