@@ -3,7 +3,7 @@
 import { ComponentType, FormEvent, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { CalendarDays, Coffee, IdCard, LockKeyhole, LogIn, Mail, UserPlus, UserRound } from "lucide-react";
+import { CalendarDays, Check, Coffee, IdCard, LoaderCircle, LockKeyhole, LogIn, Mail, UserPlus, UserRound } from "lucide-react";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import cafe from "@/assets/cafe.png";
 import background from "@/assets/background.png";
@@ -30,6 +30,7 @@ export default function Home() {
     email: "",
     senha: "",
   });
+  const [loginCaptchaStatus, setLoginCaptchaStatus] = useState<"idle" | "verifying" | "verified">("idle");
 
   const { supabase, supabaseInitError } = useMemo<{ supabase: SupabaseClient | null; supabaseInitError: string }>(() => {
     try {
@@ -87,6 +88,22 @@ export default function Home() {
     setLoginForm((prev) => ({ ...prev, [field]: removeEmoji(value) }));
   }
 
+  const loginCaptchaSolved = loginCaptchaStatus === "verified";
+
+  async function verifyLoginCaptcha() {
+    if (loginCaptchaStatus !== "idle") {
+      return;
+    }
+
+    setLoginCaptchaStatus("verifying");
+
+    await new Promise((resolve) => {
+      window.setTimeout(resolve, 1200);
+    });
+
+    setLoginCaptchaStatus("verified");
+  }
+
   async function handleCadastro(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -125,6 +142,10 @@ export default function Home() {
     try {
       if (!supabase) {
         throw new Error(supabaseInitError || "Erro ao inicializar Supabase.");
+      }
+
+      if (!loginCaptchaSolved) {
+        throw new Error("Confirme que você não é um robô antes de entrar.");
       }
 
       setLoginLoading(true);
@@ -216,9 +237,52 @@ export default function Home() {
                     placeholder="Digite sua senha"
                     required
                   />
+                  <div className="rounded-2xl border border-[#985b39]/25 bg-[#fffefc]/90 p-4 text-[#5b2f19]">
+                    <button
+                      type="button"
+                      onClick={verifyLoginCaptcha}
+                      disabled={loginCaptchaStatus !== "idle"}
+                      className="flex w-full items-center gap-3 rounded-xl border border-[#985b39]/20 bg-white px-3 py-3 text-left transition hover:border-[#b1764d]/55 disabled:cursor-default"
+                    >
+                      <span className={`flex h-6 w-6 items-center justify-center rounded border ${loginCaptchaSolved
+                        ? "border-emerald-600 bg-emerald-600 text-white"
+                        : "border-[#985b39]/50 bg-[#fffaf4] text-transparent"
+                        }`}>
+                        {loginCaptchaStatus === "verifying" ? (
+                          <LoaderCircle className="h-4 w-4 animate-spin text-[#7a3f22]" />
+                        ) : loginCaptchaSolved ? (
+                          <Check className="h-4 w-4" />
+                        ) : (
+                          <span className="h-4 w-4" />
+                        )}
+                      </span>
+                      <span className="flex-1">
+                        <span className="block text-sm font-medium text-[#5b2f19]">Não sou um robô</span>
+                        <span className="block text-xs text-[#8b654c]">
+                          {loginCaptchaStatus === "verifying"
+                            ? "Verificando..."
+                            : loginCaptchaSolved
+                              ? "Verificação concluída."
+                              : "Clique para verificar antes de entrar."}
+                        </span>
+                      </span>
+                      <span className="text-xs font-semibold text-[#7a3f22]">
+                        {loginCaptchaStatus === "verifying"
+                          ? "Aguarde"
+                          : loginCaptchaSolved
+                            ? "Pronto"
+                            : "Verificar"}
+                      </span>
+                    </button>
+                    <div className="mt-3">
+                      <p className="text-xs text-[#8b654c]">
+                        A verificação libera o botão de login.
+                      </p>
+                    </div>
+                  </div>
                   <button
                     type="submit"
-                    disabled={loginLoading}
+                    disabled={loginLoading || !loginCaptchaSolved}
                     className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(120deg,#7a3f22,#4f2814)] px-4 py-2.5 font-semibold text-[#fff7ed] shadow-[0_10px_24px_rgba(66,32,16,0.35)] transition hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <LogIn className="h-4 w-4" />
