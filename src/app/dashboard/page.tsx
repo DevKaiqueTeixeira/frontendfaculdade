@@ -531,7 +531,13 @@ export default function DashboardPage() {
                       <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#e6c7a9] bg-white">
                         {product.imagemUrl ? (
                           <div className="relative h-full w-full">
-                            <img src={buildProductImageUrl(product.imagemUrl) || ""} alt={product.nome} className="h-full w-full object-cover" />
+                            <Image
+                              src={buildProductImageUrl(product.imagemUrl) || ""}
+                              alt={product.nome}
+                              fill
+                              sizes="64px"
+                              className="object-cover"
+                            />
                           </div>
                         ) : (
                           <span className="text-sm font-semibold uppercase text-[#8a5332]">{product.nome.slice(0, 2)}</span>

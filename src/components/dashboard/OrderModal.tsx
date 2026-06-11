@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { MapPin, ShoppingBag } from "lucide-react";
 import { buildProductImageUrl } from "@/services/product.service";
 import type { AddressPreview } from "@/types/address";
@@ -66,7 +67,13 @@ export default function OrderModal({
             <div className="flex items-center gap-4">
               <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#e6c7a9] bg-[#fff7ef]">
                 {imageUrl ? (
-                  <img src={imageUrl} alt={product.nome} className="h-full w-full object-cover" />
+                  <Image
+                    src={imageUrl}
+                    alt={product.nome}
+                    fill
+                    sizes="80px"
+                    className="object-cover"
+                  />
                 ) : (
                   <ShoppingBag className="h-8 w-8 text-[#8a5332]" />
                 )}
