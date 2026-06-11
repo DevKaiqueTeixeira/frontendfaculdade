@@ -2,12 +2,16 @@ import { buildApiUrl, parseApiError } from "@/services/api";
 import type { CadastroResponse } from "@/types/cadastro";
 import type { AdditionalPayload, AdditionalPreview } from "@/types/additional";
 
-export async function buscarAdicionaisPorProduto(produtoId: number, accessToken: string): Promise<AdditionalPreview[]> {
+export async function buscarAdicionaisPorProduto(produtoId: number, accessToken?: string): Promise<AdditionalPreview[]> {
+  const headers = accessToken
+    ? {
+      Authorization: `Bearer ${accessToken}`,
+    }
+    : undefined;
+
   const response = await fetch(buildApiUrl(`/adicionais/produto/${produtoId}`), {
     method: "GET",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
+    headers,
   });
 
   if (!response.ok) {
